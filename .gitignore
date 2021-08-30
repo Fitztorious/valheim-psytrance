@@ -1,0 +1,19 @@
+# Directories
+.vs/
+bin/
+libs/
+Properties/
+psy/
+obj/Release/TempPE/
+obj/Debug/
+
+
+# Files
+*.csproj
+*.sln
+*.CopyComplete
+*.pdb
+*.cache
+*.txt
+*.cs
+!psytrance.cs
