@@ -5,9 +5,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using System.Collections;
 using System.Collections.Generic;
-// Used for local file I/O
-using System.IO;
-using System.Reflection;
+using System;
 
 namespace psytrance
 {
@@ -17,6 +15,7 @@ namespace psytrance
 
     public class psytrance : BaseUnityPlugin
     {
+
         private const string modGUID = "ca.fitztorious.valheim.plugins.psytrance";
         private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -26,14 +25,29 @@ namespace psytrance
         void Awake()
         {
 
+            var watch = new System.Diagnostics.Stopwatch();
+
             configMusicVolume = Config.Bind("Music Controls",
                                             "MusicVolume",
                                             1f,
-                                            "Adjust music volume during base attacks. [0 - 1.0]\n Try adjusting in increments of 0.1");
+                                            "Adjust music volume during base attacks. [0 - 1.0]\nTry adjusting in increments of 0.1");
+            
+            watch.Start();
+            LoadMusic(); // Download and load tracks into memory.
+            watch.Stop();
 
-            LoadMusic();
+            TimeSpan ts = watch.Elapsed;
+            UnityEngine.Debug.Log("psytrance: Tracks loaded in " + ts.TotalSeconds + " seconds.");
 
             harmony.PatchAll();
+
+        }
+
+        void OnDestroy()
+        {
+
+            harmony.UnpatchSelf();
+
         }
 
         [HarmonyPatch(typeof(MusicMan), "Awake")]
@@ -43,6 +57,7 @@ namespace psytrance
             [HarmonyPostfix]
             static void SetPsyMusic()
             {
+
                 // m_music  is a [list of NamedMusic].
                 // Each NamedMusic has a property m_clips [list of AudioClips].
                 // Each NamedMusic has a property m_name [string].
@@ -85,8 +100,10 @@ namespace psytrance
                 // Insert new psytrance tracks into musicList. 
                 for (int i = 4; i < 8; i++)
                 {
+
                     musicList[i].m_clips[0] = psyTracks[j];
                     j++;
+
                 }
 
                 //musicList[4].m_clips[0] = psyTracks[0]; 
@@ -95,7 +112,9 @@ namespace psytrance
                 //musicList[7].m_clips[0] = psyTracks[3];
 
                 //UnityEngine.Debug.Log("psymod: " + psyTracks[0].GetType());        //UnityEngine.AudioClip
+
             }
+
         }
 
         [HarmonyPatch(typeof(RandEventSystem), "StartRandomEvent")]
@@ -106,6 +125,8 @@ namespace psytrance
             static void RandomPsy()
             {
 
+                // Randomly assigns new tracks to each event at the start of every event.
+
                 var musicList = MusicMan.instance.m_music;
                 var rand = new System.Random();
 
@@ -115,14 +136,18 @@ namespace psytrance
                 // 5 : CombatEventL2
                 // 6 : CombatEventL3
                 // 7 : CombatEventL4
-
+                    
                 for (int i = 4; i < 8; i++)
                 {
+
                     musicList[i].m_clips[0] = psyTracks[rand.Next(0, 4)];
                     musicList[i].m_savedPlaybackPos = 0;                        // Always start event track at beginning
                     //musicList[i].m_volume = 1f;                               // not tested - get this value from config
+
                 }
+
             }
+
         }
 
         public void LoadMusic()
@@ -145,30 +170,45 @@ namespace psytrance
             StartCoroutine(GetPsytrance(fpath3)); //CombatEventL3
             StartCoroutine(GetPsytrance(fpath3)); //CombatEventL4 //Change this back to fpath4 when 4th track loaded.
 
+            // Used for local file I/O
+            //using System.IO;
+            //using System.Reflection;
+
             // Paths for local files.
             //StartCoroutine(GetPsytrance(fpath + "psy1.wav")); //CombatEventL1
             //StartCoroutine(GetPsytrance(fpath + "psy2.wav")); //CombatEventL2
             //StartCoroutine(GetPsytrance(fpath + "psy3.wav")); //CombatEventL3
             //StartCoroutine(GetPsytrance(fpath + "psy4.wav")); //CombatEventL4
+
         }
 
         IEnumerator GetPsytrance(string uri)
         {
+
             using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.WAV))
+
             {
 
                 yield return www.SendWebRequest();
 
                 if (www.isHttpError || www.isNetworkError)
                 {
+
                     UnityEngine.Debug.Log(www.error);
+
                 }
                 else
                 {
+
                     AudioClip psy = DownloadHandlerAudioClip.GetContent(www);
                     psyTracks.Add(psy);
+
                 }
+
             }
+
         }
+
     }
+
 }
