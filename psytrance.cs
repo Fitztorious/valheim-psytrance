@@ -33,7 +33,7 @@ namespace psytrance
                                             "Adjust music volume during base attacks. [0 - 1.0]\nTry adjusting in increments of 0.1");
             
             watch.Start();
-            LoadMusic(); // Download and load tracks into memory.
+            LoadMusic();        // Download and load tracks into memory.
             watch.Stop();
 
             TimeSpan ts = watch.Elapsed;
@@ -79,9 +79,9 @@ namespace psytrance
                 //CombatEventL4
                 //ForestIsMovingLv4 (UnityEngine.AudioClip)
 
-                // This  will run after the new AudioClips are loaded into a list.
-                // We can replace all the event audio clips in musicList with audioClips.
-                // Below are the songs we need to replace.
+                // This  will run after the new tracks are loaded into a list.
+                // We can replace all the event audio clips in musicList with psyTracks.
+                // Below are the tracks and positions we need to replace.
 
                 //  index position : song name in [musicList]
                 // 2 : menu
@@ -106,13 +106,6 @@ namespace psytrance
 
                 }
 
-                //musicList[4].m_clips[0] = psyTracks[0]; 
-                //musicList[5].m_clips[0] = psyTracks[1];
-                //musicList[6].m_clips[0] = psyTracks[2];
-                //musicList[7].m_clips[0] = psyTracks[3];
-
-                //UnityEngine.Debug.Log("psymod: " + psyTracks[0].GetType());        //UnityEngine.AudioClip
-
             }
 
         }
@@ -125,11 +118,12 @@ namespace psytrance
             static void RandomPsy()
             {
 
-                // Randomly assigns new tracks to each event at the start of every event.
+                // This function randomly assigns new tracks to each event at the start of every event.
 
                 var musicList = MusicMan.instance.m_music;
                 var rand = new System.Random();
 
+                // These are the track positions we need to replace.
                 //  index position : song name in [musicList]
                 // 2 : menu
                 // 4 : CombatEventL1
@@ -155,10 +149,6 @@ namespace psytrance
 
             psyTracks.Clear();
 
-            //string fpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "psy\\");
-            //file:///Z:/Steam/steamapps/common/Valheim/BepInEx/plugins/psy/psy.wav
-            //fpath = "file:///" + fpath.Replace("\\", "/");
-
             string fpath1 = "https://drive.google.com/uc?id=1fCBrsj7MMR9YRfFliYXQNyCBwdzVbCyf&export=download";
             string fpath2 = "https://drive.google.com/uc?id=1To5jfnZm6BD5e1r6Dt38cC_RrC6cJxUV&export=download";
             string fpath3 = "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download";
@@ -168,17 +158,24 @@ namespace psytrance
             StartCoroutine(GetPsytrance(fpath1)); //CombatEventL1
             StartCoroutine(GetPsytrance(fpath2)); //CombatEventL2
             StartCoroutine(GetPsytrance(fpath3)); //CombatEventL3
-            StartCoroutine(GetPsytrance(fpath3)); //CombatEventL4 //Change this back to fpath4 when 4th track loaded.
+            StartCoroutine(GetPsytrance(fpath3)); //CombatEventL4       //Change this back to fpath4 when 4th track loaded.
 
+            //---- FOR LOADING TRACKS LOCALLY -------------------------------------------------------------------------
             // Used for local file I/O
             //using System.IO;
             //using System.Reflection;
 
-            // Paths for local files.
+            // Retrieves local path.
+            //string fpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "psy\\");
+            //file:///Z:/Steam/steamapps/common/Valheim/BepInEx/plugins/psy/psy.wav
+            //fpath = "file:///" + fpath.Replace("\\", "/");
+
+            // Sends Paths for local retrieval.
             //StartCoroutine(GetPsytrance(fpath + "psy1.wav")); //CombatEventL1
             //StartCoroutine(GetPsytrance(fpath + "psy2.wav")); //CombatEventL2
             //StartCoroutine(GetPsytrance(fpath + "psy3.wav")); //CombatEventL3
             //StartCoroutine(GetPsytrance(fpath + "psy4.wav")); //CombatEventL4
+            //---------------------------------------------------------------------------------------------------------
 
         }
 
