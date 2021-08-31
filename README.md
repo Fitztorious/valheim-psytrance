@@ -6,6 +6,6 @@ Downloads about 10MB at startup so it's not recommended for slow connections.
 
 ## Installation
 
-Place **obj/Release/psytrance.dll** into your BepInEx plugins folder, typically located here:
+Place **bin/Release/psytrance.dll** into your BepInEx plugins folder, typically located here:
 
     Steam\steamapps\common\Valheim\BepInEx\plugins
