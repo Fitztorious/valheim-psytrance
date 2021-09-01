@@ -58,6 +58,20 @@ namespace psytrance
             static void SetPsyMusic()
             {
 
+                UpdatePatch.RandomPsy();
+
+            }
+
+        }
+
+        [HarmonyPatch(typeof(RandEventSystem), "StartRandomEvent")]
+        class UpdatePatch
+        {
+
+            [HarmonyPrefix]
+            public static void RandomPsy()
+            {
+
                 // m_music  is a [list of NamedMusic].
                 // Each NamedMusic has a property m_clips [list of AudioClips].
                 // Each NamedMusic has a property m_name [string].
@@ -66,9 +80,6 @@ namespace psytrance
 
                 //m_name [string]
                 //m_clips[0] [AudioClip]
-
-                //combat
-                //ForestIsMovingLv4 (UnityEngine.AudioClip)
 
                 //CombatEventL1
                 //ForestIsMovingLv1 (UnityEngine.AudioClip)
@@ -90,54 +101,16 @@ namespace psytrance
                 // 6 : CombatEventL3
                 // 7 : CombatEventL4
 
-                //musicList[2].m_clips[0] = psyTracks[0];  // Menu track used for testing.
-
-                // Loads list of NamedMusic into musicList
-                var musicList = MusicMan.instance.m_music;
-
-                var j = 0;
-
-                // Insert new psytrance tracks into musicList. 
-                for (int i = 4; i < 8; i++)
-                {
-
-                    musicList[i].m_clips[0] = psyTracks[j];
-                    j++;
-
-                }
-
-            }
-
-        }
-
-        [HarmonyPatch(typeof(RandEventSystem), "StartRandomEvent")]
-        class UpdatePatch
-        {
-
-            [HarmonyPrefix]
-            static void RandomPsy()
-            {
-
-                // This function randomly assigns new tracks to each event at the start of every event.
+                // This function randomly assigns new tracks to each event at the start of every event and on awake.
 
                 var musicList = MusicMan.instance.m_music;
                 var rand = new System.Random();
-
-                // These are the track positions we need to replace.
-                //  index position : song name in [musicList]
-                // 2 : menu
-                // 4 : CombatEventL1
-                // 5 : CombatEventL2
-                // 6 : CombatEventL3
-                // 7 : CombatEventL4
                     
                 for (int i = 4; i < 8; i++)
                 {
-
-                    musicList[i].m_clips[0] = psyTracks[rand.Next(0, 4)];
+                    musicList[i].m_clips[0] = psyTracks[rand.Next(0, 5)];
                     musicList[i].m_savedPlaybackPos = 0;                        // Always start event track at beginning
                     //musicList[i].m_volume = 1f;                               // not tested - get this value from config
-
                 }
 
             }
@@ -151,23 +124,24 @@ namespace psytrance
 
             string fpath1 = "https://drive.google.com/uc?id=1fCBrsj7MMR9YRfFliYXQNyCBwdzVbCyf&export=download";
             string fpath2 = "https://drive.google.com/uc?id=1To5jfnZm6BD5e1r6Dt38cC_RrC6cJxUV&export=download";
-            string fpath3 = "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download";
-            //string fpath4 = "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download";
+            string fpath3 = "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download";     
+            string fpath4 = "https://drive.google.com/uc?id=1_MZhuT0J6a7M6RnsdNsbrIpp0on1Ai_D&export=download";
+            string fpath5 = "https://drive.google.com/uc?id=1qLS4T8bLEyCsqbgLMxrwdj6AuUQkSXjx&export=download";
 
             // Send paths to be loaded into psyTracks array.
-            StartCoroutine(GetPsytrance(fpath1)); //CombatEventL1
-            StartCoroutine(GetPsytrance(fpath2)); //CombatEventL2
-            StartCoroutine(GetPsytrance(fpath3)); //CombatEventL3
-            StartCoroutine(GetPsytrance(fpath3)); //CombatEventL4       //Change this back to fpath4 when 4th track loaded.
+            StartCoroutine(GetPsytrance(fpath1));
+            StartCoroutine(GetPsytrance(fpath2));
+            StartCoroutine(GetPsytrance(fpath3));
+            StartCoroutine(GetPsytrance(fpath4));
+            StartCoroutine(GetPsytrance(fpath5));
 
             //---- FOR LOADING TRACKS LOCALLY -------------------------------------------------------------------------
             // Used for local file I/O
             //using System.IO;
             //using System.Reflection;
 
-            // Retrieves local path.
+            // Retrieves local path in this format file:///X:/Steam/steamapps/common/Valheim/BepInEx/plugins/psy/psy.wav
             //string fpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "psy\\");
-            //file:///Z:/Steam/steamapps/common/Valheim/BepInEx/plugins/psy/psy.wav
             //fpath = "file:///" + fpath.Replace("\\", "/");
 
             // Sends Paths for local retrieval.
@@ -190,16 +164,12 @@ namespace psytrance
 
                 if (www.isHttpError || www.isNetworkError)
                 {
-
                     UnityEngine.Debug.Log(www.error);
-
                 }
                 else
                 {
-
                     AudioClip psy = DownloadHandlerAudioClip.GetContent(www);
                     psyTracks.Add(psy);
-
                 }
 
             }
