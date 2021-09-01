@@ -9,13 +9,11 @@ using System;
 
 namespace psytrance
 {
-
     [BepInPlugin(modGUID, "Psy Attack", "1.0.0")]
     [BepInProcess("valheim.exe")]
 
     public class psytrance : BaseUnityPlugin
     {
-
         private const string modGUID = "ca.fitztorious.valheim.plugins.psytrance";
         private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -24,54 +22,38 @@ namespace psytrance
 
         void Awake()
         {
-
-            var watch = new System.Diagnostics.Stopwatch();
-
             configMusicVolume = Config.Bind("Music Controls",
                                             "MusicVolume",
-                                            1f,
+                                            0.6f,
                                             "Adjust music volume during base attacks. [0 - 1.0]\nTry adjusting in increments of 0.1");
-            
-            watch.Start();
-            LoadMusic();        // Download and load tracks into memory.
-            watch.Stop();
 
-            TimeSpan ts = watch.Elapsed;
-            UnityEngine.Debug.Log("psytrance: Tracks loaded in " + ts.TotalSeconds + " seconds.");
+            // Download and load tracks into memory.
+            LoadMusic();        
 
             harmony.PatchAll();
-
         }
 
         void OnDestroy()
         {
-
             harmony.UnpatchSelf();
-
         }
 
         [HarmonyPatch(typeof(MusicMan), "Awake")]
         class MusicManPatch
         {
-
             [HarmonyPostfix]
             static void SetPsyMusic()
             {
-
                 UpdatePatch.RandomPsy();
-
             }
-
         }
 
         [HarmonyPatch(typeof(RandEventSystem), "StartRandomEvent")]
         class UpdatePatch
         {
-
             [HarmonyPrefix]
             public static void RandomPsy()
             {
-
                 // m_music  is a [list of NamedMusic].
                 // Each NamedMusic has a property m_clips [list of AudioClips].
                 // Each NamedMusic has a property m_name [string].
@@ -112,13 +94,12 @@ namespace psytrance
                     musicList[i].m_savedPlaybackPos = 0;                        // Always start event track at beginning
                     //musicList[i].m_volume = 1f;                               // not tested - get this value from config
                 }
-
             }
-
         }
 
-        public void LoadMusic()
+        private void LoadMusic()
         {
+            var watch = new System.Diagnostics.Stopwatch();
 
             psyTracks.Clear();
 
@@ -128,12 +109,19 @@ namespace psytrance
             string fpath4 = "https://drive.google.com/uc?id=1_MZhuT0J6a7M6RnsdNsbrIpp0on1Ai_D&export=download";
             string fpath5 = "https://drive.google.com/uc?id=1qLS4T8bLEyCsqbgLMxrwdj6AuUQkSXjx&export=download";
 
+            watch.Start();
+
             // Send paths to be loaded into psyTracks array.
             StartCoroutine(GetPsytrance(fpath1));
             StartCoroutine(GetPsytrance(fpath2));
             StartCoroutine(GetPsytrance(fpath3));
             StartCoroutine(GetPsytrance(fpath4));
             StartCoroutine(GetPsytrance(fpath5));
+
+            watch.Stop();
+
+            TimeSpan ts = watch.Elapsed;
+            UnityEngine.Debug.Log("psytrance: Tracks loaded in " + ts.TotalSeconds + " seconds.");
 
             //---- FOR LOADING TRACKS LOCALLY -------------------------------------------------------------------------
             // Used for local file I/O
@@ -150,16 +138,13 @@ namespace psytrance
             //StartCoroutine(GetPsytrance(fpath + "psy3.wav")); //CombatEventL3
             //StartCoroutine(GetPsytrance(fpath + "psy4.wav")); //CombatEventL4
             //---------------------------------------------------------------------------------------------------------
-
         }
 
         IEnumerator GetPsytrance(string uri)
         {
-
             using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.WAV))
 
             {
-
                 yield return www.SendWebRequest();
 
                 if (www.isHttpError || www.isNetworkError)
@@ -171,11 +156,7 @@ namespace psytrance
                     AudioClip psy = DownloadHandlerAudioClip.GetContent(www);
                     psyTracks.Add(psy);
                 }
-
             }
-
         }
-
     }
-
 }
