@@ -1,34 +1,64 @@
-﻿using HarmonyLib;
+﻿// Structure of m_music
+
+// m_music  is a [list of NamedMusic].
+// Each NamedMusic has a property m_clips [list of AudioClips].
+// Each NamedMusic has a property m_name [string].
+// There is only 1 audio clip at position [0] in each NamedMusic at this time.
+// The idea is to replace m_clips[0] where m_name is one of the random events.
+
+// m_name [string]
+// m_clips[0] [AudioClip]
+
+// CombatEventL1 
+// ForestIsMovingLv1 (UnityEngine.AudioClip)
+// CombatEventL2 
+// ForestIsMovingLv2 (UnityEngine.AudioClip)
+// CombatEventL3 
+// ForestIsMovingLv3 (UnityEngine.AudioClip)
+// CombatEventL4 
+// ForestIsMovingLv4 (UnityEngine.AudioClip)
+
+// Longest event is army_bonemass at 150 seconds (2min 30sec)
+
+// index position : track name in [musicList]
+// 2 : menu
+// 4 : CombatEventL1
+// 5 : CombatEventL2
+// 6 : CombatEventL3
+// 7 : CombatEventL4
+
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
 using BepInEx;
 using BepInEx.Configuration;
 using System.Collections;
 using System.Collections.Generic;
-using System;
 
-namespace psytrance
+namespace Psytrance
 {
-    [BepInPlugin(modGUID, "Psy Attack", "1.0.0")]
+    [BepInPlugin(modGUID, "Psytrance Events", "1.1.0")]
     [BepInProcess("valheim.exe")]
 
-    public class psytrance : BaseUnityPlugin
+    public class Psytrance : BaseUnityPlugin
     {
-        private const string modGUID = "ca.fitztorious.valheim.plugins.psytrance";
         private readonly Harmony harmony = new Harmony(modGUID);
-
+        private const string modGUID = "ca.fitztorious.valheim.plugins.psytrance";
         private static ConfigEntry<float> configMusicVolume;
-        private static List<AudioClip> psyTracks = new List<AudioClip>();
+        private static readonly List<AudioClip> psyTracks = new List<AudioClip>();
+        private static string lastEvent;
+        private static readonly Dictionary<string, int> trackAssignments = new Dictionary<string, int>();
+        private static int dontPlay = -1;
 
         void Awake()
-        {
-            configMusicVolume = Config.Bind("Music Controls",
-                                            "MusicVolume",
-                                            0.6f,
-                                            "Adjust music volume during base attacks. [0 - 1.0]\nTry adjusting in increments of 0.1");
+        { 
+            configMusicVolume = Config.Bind<float>("Music Controls",
+                                                   "MusicVolume",
+                                                   0.6f,
+                                                   "Adjust music volume during base attacks. [0 - 1.0]" +
+                                                   "\nTry adjusting in increments of 0.1");
 
-            // Download and load tracks into memory.
-            LoadMusic();        
+            LoadMusic();
 
             harmony.PatchAll();
         }
@@ -39,108 +69,102 @@ namespace psytrance
         }
 
         [HarmonyPatch(typeof(MusicMan), "Awake")]
-        class MusicManPatch
+        class MusicManAwakePatch
         {
             [HarmonyPostfix]
             static void SetPsyMusic()
             {
-                UpdatePatch.RandomPsy();
+                PsyOverride.RandomPsy();
+            }
+        }
+
+        [HarmonyPatch(typeof(MusicMan), "HandleEventMusic")]
+        class MusicManEventPatch
+        {
+            [HarmonyPostfix]
+            static void GetPsyEvent()
+            {
+                var musicList = MusicMan.instance;
+
+                if (!musicList.m_randomEventMusic.IsNullOrWhiteSpace())
+                {
+                    lastEvent = musicList.m_randomEventMusic;
+                }
             }
         }
 
         [HarmonyPatch(typeof(RandEventSystem), "StartRandomEvent")]
-        class UpdatePatch
+        class PsyOverride
         {
             [HarmonyPrefix]
             public static void RandomPsy()
             {
-                // m_music  is a [list of NamedMusic].
-                // Each NamedMusic has a property m_clips [list of AudioClips].
-                // Each NamedMusic has a property m_name [string].
-                // There is only 1 audio clip at position [0] in each NamedMusic at this time.
-                // The goal is to replace m_clips[0] where m_name is one of the random events.
-
-                //m_name [string]
-                //m_clips[0] [AudioClip]
-
-                //CombatEventL1
-                //ForestIsMovingLv1 (UnityEngine.AudioClip)
-                //CombatEventL2
-                //ForestIsMovingLv2 (UnityEngine.AudioClip)
-                //CombatEventL3
-                //ForestIsMovingLv3 (UnityEngine.AudioClip)
-                //CombatEventL4
-                //ForestIsMovingLv4 (UnityEngine.AudioClip)
-
-                // This  will run after the new tracks are loaded into a list.
-                // We can replace all the event audio clips in musicList with psyTracks.
-                // Below are the tracks and positions we need to replace.
-
-                //  index position : song name in [musicList]
-                // 2 : menu
-                // 4 : CombatEventL1
-                // 5 : CombatEventL2
-                // 6 : CombatEventL3
-                // 7 : CombatEventL4
-
-                // This function randomly assigns new tracks to each event at the start of every event and on awake.
-
                 var musicList = MusicMan.instance.m_music;
                 var rand = new System.Random();
-                    
+                int pos;
+
+                if (!lastEvent.IsNullOrWhiteSpace() && trackAssignments.Count != 0)
+                {
+                    try
+                    {
+                        trackAssignments.TryGetValue(lastEvent, out dontPlay);
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        Debug.Log("Psytrance Events: Could not find " + lastEvent + " in the available tracks.\n");
+                    }
+                }
+
+                trackAssignments.Clear();
+
                 for (int i = 4; i < 8; i++)
                 {
-                    musicList[i].m_clips[0] = psyTracks[rand.Next(0, 5)];
-                    musicList[i].m_savedPlaybackPos = 0;                        // Always start event track at beginning
-                    //musicList[i].m_volume = 1f;                               // not tested - get this value from config
+                    do
+                    {
+                        pos = rand.Next(0, 5);
+
+                    } while (pos == dontPlay);
+
+                    trackAssignments.Add(musicList[i].m_name, pos);
+
+                    musicList[i].m_clips[0] = psyTracks[pos];
+                    musicList[i].m_savedPlaybackPos = 0;
+                    musicList[i].m_volume = configMusicVolume.Value;
                 }
             }
         }
 
         private void LoadMusic()
         {
-            var watch = new System.Diagnostics.Stopwatch();
+            string filePath = "";
+
+            Dictionary<string, string> trackDictionary = new Dictionary<string, string>
+            {
+                { "fpath0", "https://drive.google.com/uc?id=1fCBrsj7MMR9YRfFliYXQNyCBwdzVbCyf&export=download" },
+                { "fpath1", "https://drive.google.com/uc?id=1To5jfnZm6BD5e1r6Dt38cC_RrC6cJxUV&export=download" },
+                { "fpath2", "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download" },
+                { "fpath3", "https://drive.google.com/uc?id=1_MZhuT0J6a7M6RnsdNsbrIpp0on1Ai_D&export=download" },
+                { "fpath4", "https://drive.google.com/uc?id=1qLS4T8bLEyCsqbgLMxrwdj6AuUQkSXjx&export=download" }
+            };
 
             psyTracks.Clear();
 
-            string fpath1 = "https://drive.google.com/uc?id=1fCBrsj7MMR9YRfFliYXQNyCBwdzVbCyf&export=download";
-            string fpath2 = "https://drive.google.com/uc?id=1To5jfnZm6BD5e1r6Dt38cC_RrC6cJxUV&export=download";
-            string fpath3 = "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download";     
-            string fpath4 = "https://drive.google.com/uc?id=1_MZhuT0J6a7M6RnsdNsbrIpp0on1Ai_D&export=download";
-            string fpath5 = "https://drive.google.com/uc?id=1qLS4T8bLEyCsqbgLMxrwdj6AuUQkSXjx&export=download";
-
-            watch.Start();
-
-            // Send paths to be loaded into psyTracks array.
-            StartCoroutine(GetPsytrance(fpath1));
-            StartCoroutine(GetPsytrance(fpath2));
-            StartCoroutine(GetPsytrance(fpath3));
-            StartCoroutine(GetPsytrance(fpath4));
-            StartCoroutine(GetPsytrance(fpath5));
-
-            watch.Stop();
-
-            TimeSpan ts = watch.Elapsed;
-            UnityEngine.Debug.Log("psytrance: Tracks loaded in " + ts.TotalSeconds + " seconds.");
-
-            //---- FOR LOADING TRACKS LOCALLY -------------------------------------------------------------------------
-            // Used for local file I/O
-            //using System.IO;
-            //using System.Reflection;
-
-            // Retrieves local path in this format file:///X:/Steam/steamapps/common/Valheim/BepInEx/plugins/psy/psy.wav
-            //string fpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "psy\\");
-            //fpath = "file:///" + fpath.Replace("\\", "/");
-
-            // Sends Paths for local retrieval.
-            //StartCoroutine(GetPsytrance(fpath + "psy1.wav")); //CombatEventL1
-            //StartCoroutine(GetPsytrance(fpath + "psy2.wav")); //CombatEventL2
-            //StartCoroutine(GetPsytrance(fpath + "psy3.wav")); //CombatEventL3
-            //StartCoroutine(GetPsytrance(fpath + "psy4.wav")); //CombatEventL4
-            //---------------------------------------------------------------------------------------------------------
+            for (var i = 0; i < trackDictionary.Count; i++)
+            {
+                try
+                {
+                    trackDictionary.TryGetValue("fpath" + i, out filePath);
+                    StartCoroutine(GetPsytrance(filePath));
+                }
+                catch (KeyNotFoundException)
+                {
+                    Debug.Log("Psytrance Events: Track " + filePath + " could not be loaded.\n");
+                }
+                filePath = "";
+            }
         }
 
-        IEnumerator GetPsytrance(string uri)
+        private static IEnumerator GetPsytrance(string uri)
         {
             using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.WAV))
 
@@ -149,7 +173,7 @@ namespace psytrance
 
                 if (www.isHttpError || www.isNetworkError)
                 {
-                    UnityEngine.Debug.Log(www.error);
+                    Debug.Log(www.error);
                 }
                 else
                 {
