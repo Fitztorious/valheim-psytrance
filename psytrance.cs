@@ -46,8 +46,8 @@ namespace Psytrance
         private const string modGUID = "ca.fitztorious.valheim.plugins.psytrance";
         private static ConfigEntry<float> configMusicVolume;
         private static readonly List<AudioClip> psyTracks = new List<AudioClip>();
-        private static string lastEvent;
         private static readonly Dictionary<string, int> trackAssignments = new Dictionary<string, int>();
+        private static string lastEvent;
         private static int dontPlay = -1;
 
         void Awake()
@@ -86,6 +86,7 @@ namespace Psytrance
             {
                 var musicList = MusicMan.instance;
 
+                // Gets the name of the most recent event track so it can be prevented from playing again.
                 if (!musicList.m_randomEventMusic.IsNullOrWhiteSpace())
                 {
                     lastEvent = musicList.m_randomEventMusic;
@@ -103,6 +104,7 @@ namespace Psytrance
                 var rand = new System.Random();
                 int pos;
 
+                // Determines what track to not repeat, will only run after first event.
                 if (!lastEvent.IsNullOrWhiteSpace() && trackAssignments.Count != 0)
                 {
                     try
@@ -125,11 +127,17 @@ namespace Psytrance
 
                     } while (pos == dontPlay);
 
-                    trackAssignments.Add(musicList[i].m_name, pos);
+                    try
+                    {
+                        trackAssignments.Add(musicList[i].m_name, pos);
+                        musicList[i].m_clips[0] = psyTracks[pos];
+                        musicList[i].m_savedPlaybackPos = 0;
+                        musicList[i].m_volume = configMusicVolume.Value;
 
-                    musicList[i].m_clips[0] = psyTracks[pos];
-                    musicList[i].m_savedPlaybackPos = 0;
-                    musicList[i].m_volume = configMusicVolume.Value;
+                    } catch
+                    {
+                        Debug.Log("Psytrance Events: Unable to load " + musicList[i].m_name + " from position " + pos + " in psyTracks.\n");
+                    }
                 }
             }
         }
@@ -140,11 +148,11 @@ namespace Psytrance
 
             Dictionary<string, string> trackDictionary = new Dictionary<string, string>
             {
-                { "fpath0", "https://drive.google.com/uc?id=1fCBrsj7MMR9YRfFliYXQNyCBwdzVbCyf&export=download" },
-                { "fpath1", "https://drive.google.com/uc?id=1To5jfnZm6BD5e1r6Dt38cC_RrC6cJxUV&export=download" },
-                { "fpath2", "https://drive.google.com/uc?id=1ONpBuSoMtrMiQeG8f5UT2ZJG6mmjz8lx&export=download" },
-                { "fpath3", "https://drive.google.com/uc?id=1_MZhuT0J6a7M6RnsdNsbrIpp0on1Ai_D&export=download" },
-                { "fpath4", "https://drive.google.com/uc?id=1qLS4T8bLEyCsqbgLMxrwdj6AuUQkSXjx&export=download" }
+                { "fpath0", "https://drive.google.com/uc?id=140Q_0Vzj9fO0DeYBMZz3ygRcZzPa4i4e&export=download" },
+                { "fpath1", "https://drive.google.com/uc?id=19YyhlxWhlCrOzdIor5qw9M2Ms9RSWSO1&export=download" },
+                { "fpath2", "https://drive.google.com/uc?id=1oOhB455tAJGl3SIMQPtl_V9Dm810621S&export=download" },
+                { "fpath3", "https://drive.google.com/uc?id=1sRV-eT7zTTJfyZh-z6NbjCEmJePkle32&export=download" },
+                { "fpath4", "https://drive.google.com/uc?id=1xOE2IhIeKtQLCwU9POJVbUVPaPhDoZ0D&export=download" }
             };
 
             psyTracks.Clear();
@@ -166,7 +174,7 @@ namespace Psytrance
 
         private static IEnumerator GetPsytrance(string uri)
         {
-            using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.WAV))
+            using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.OGGVORBIS))
 
             {
                 yield return www.SendWebRequest();
