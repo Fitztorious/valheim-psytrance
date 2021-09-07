@@ -37,7 +37,7 @@ using System.Collections.Generic;
 
 namespace Psytrance
 {
-    [BepInPlugin(modGUID, "Psytrance Events", "1.1.0")]
+    [BepInPlugin(modGUID, "Psytrance Events", "1.1.1")]
     [BepInProcess("valheim.exe")]
 
     public class Psytrance : BaseUnityPlugin
