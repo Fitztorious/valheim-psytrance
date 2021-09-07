@@ -139,6 +139,11 @@ namespace Psytrance
                         Debug.Log("Psytrance Events: Unable to load " + musicList[i].m_name + " from position " + pos + " in psyTracks.\n");
                     }
                 }
+
+                if (MessageHud.instance != null)
+                {
+                    MessageHud.instance.ShowMessage(MessageHud.MessageType.TopLeft, "Poetic god Bragi unleashes psytrance upon the land!");
+                }
             }
         }
 
